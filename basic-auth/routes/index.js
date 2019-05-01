@@ -64,17 +64,54 @@ router.post("/login", (req, res, next) => {
 });
 
 
+router.post("/signup", (req, res, next) => {
+  const username = req.body.username;
+  const password = req.body.password;
 
-// router.use((req, res, next) => {
-//   console.log('in req.session', req.session)
-//   if (req.session.currentUser) { // <== if there's user in the session (user is logged in)
-//     next(); // ==> go to the next route ---
-//   } else {                          //    |
-//     res.redirect("/login");         //    |
-//   }                                 //    |
-// }); // ------------------------------------                                
-// //     | 
-// //     V
+  if (username === "" || password === "") {
+    res.render("auth/signup", { message: "Indicate username and password" });
+    return;
+  }
+
+  User.findOne({ username })
+  .then(user => {
+    if (user !== null) {
+      res.render("auth/signup", { message: "The username already exists" });
+      return;
+    }
+
+    const salt = bcrypt.genSaltSync(bcryptSalt);
+    const hashPass = bcrypt.hashSync(password, salt);
+
+    const newUser = new User({
+      username,
+      password: hashPass
+    });
+
+    newUser.save((err) => {
+      if (err) {
+        res.render("auth/signup", { message: "Something went wrong" });
+      } else {
+        res.redirect("/");
+      }
+    });
+  })
+  .catch(error => {
+    next(error)
+  })
+});
+
+
+router.use((req, res, next) => {
+  console.log('in req.session', req.session)
+  if (req.session.currentUser) { // <== if there's user in the session (user is logged in)
+    next(); // ==> go to the next route ---
+  } else {                          //    |
+    res.redirect("/login");         //    |
+  }                                 //    |
+}); // ------------------------------------                                
+//     | 
+//     V
 router.get("/secret", (req, res, next) => {
   res.render("secret", {name:req.session.currentUser.username});
 });
